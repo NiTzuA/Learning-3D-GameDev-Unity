@@ -35,7 +35,7 @@ public class MovementController : MonoBehaviour
 
         if (isGrounded && velocity.y < 0) 
         {
-            velocity.y = -1f;
+            velocity.y = -10f;
         }
 
         float x = Input.GetAxisRaw("Horizontal");
