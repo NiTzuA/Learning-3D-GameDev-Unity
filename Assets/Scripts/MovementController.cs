@@ -16,7 +16,7 @@ public class MovementController : MonoBehaviour
     float gameSpeedX;
     float gameSpeedY;
 
-    public Transform groundCheck;
+    public Transform groundCheck1;
     public float groundDistance = 0.4f;
     public LayerMask groundMask;
 
@@ -33,7 +33,7 @@ public class MovementController : MonoBehaviour
 
     void Update()
     {
-        isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
+        isGrounded = Physics.CheckSphere(groundCheck1.position, groundDistance, groundMask);
 
         if (isGrounded && velocity.y < 0) 
         {
