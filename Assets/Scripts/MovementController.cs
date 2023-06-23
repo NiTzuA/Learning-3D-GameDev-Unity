@@ -23,6 +23,7 @@ public class MovementController : MonoBehaviour
     Vector3 velocity;
     bool isGrounded;
 
+
     private void Start()
     {
         playerFOV.fieldOfView = walkFOV;

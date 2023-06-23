@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class Gun : MonoBehaviour
 {
-
+    public string weaponName = "Gun";
     public float damage = 10f;
     public float range = 100f;
     public float gunRecoil = 20f;
@@ -13,11 +13,16 @@ public class Gun : MonoBehaviour
     public float fireRate = 15.0f;
     public float currentAmmo;
     public float magSize = 30f;
+    public float explosionRadius = 0f;
     public bool isAuto;
+    public bool isExplosive;
+    bool zeroAmmo;
     float drawAnimation = 0;
     bool currentlyReloading;
     private float nextTimeToFire;
     public float animationDistance = 20f;
+    public float weaponForce = 10f;
+    GameManager gameManager;
 
     public ParticleSystem muzzleFlash;
     public Transform fpsCamera;
@@ -25,6 +30,7 @@ public class Gun : MonoBehaviour
     public AudioClip fireSound;
     public AudioClip reload;
     public AudioClip reloadFinish;
+    public AudioClip noAmmo;
     public GameObject hitImpact;
     public int playerLayer;
     private int layerMask;
@@ -52,36 +58,46 @@ public class Gun : MonoBehaviour
 
     private void Start()
     {
+        gameManager = GameManager.instance;
         drawAnimation = -animationDistance;
         weaponHolder.transform.localPosition = new Vector3(0f, -animationDistance, 0f);
         currentAmmo = magSize;
         screenRecoil = -screenRecoil;
+        zeroAmmo = false;
         layerMask = 1 << playerLayer; // I still don't get why I have to bit shift to obtain the layer mask...
     }
 
     void Update()
     {
-        switch (isAuto)
+        if (currentAmmo == 0 && Input.GetButtonDown("Fire1") && Time.time >= nextTimeToFire && !currentlyReloading)
         {
-            case true:
-                if (Input.GetButton("Fire1") && Time.time >= nextTimeToFire && currentAmmo != 0 && !currentlyReloading)
-                {
-                    nextTimeToFire = Time.time + 1f / fireRate;
-                    Shoot();
-                }
-                break;
-            case false:
-                if (Input.GetButtonDown("Fire1") && Time.time >= nextTimeToFire && currentAmmo != 0 && !currentlyReloading)
-                {
-                    nextTimeToFire = Time.time + 1f / fireRate;
-                    Shoot();
-                }
-                break;
+            nextTimeToFire = Time.time + 1f / fireRate;
+            Shoot();
+            zeroAmmo = true;
+        } else
+        {
+            switch (isAuto)
+            {
+                case true:
+                    if (Input.GetButton("Fire1") && Time.time >= nextTimeToFire && !currentlyReloading && !zeroAmmo)
+                    {
+                        nextTimeToFire = Time.time + 1f / fireRate;
+                        Shoot();
+                    }
+                    break;
+                case false:
+                    if (Input.GetButtonDown("Fire1") && Time.time >= nextTimeToFire && !currentlyReloading && !zeroAmmo)
+                    {
+                        nextTimeToFire = Time.time + 1f / fireRate;
+                        Shoot();
+                    }
+                    break;
+            }
         }
 
-        if (Input.GetKey(KeyCode.R) && !currentlyReloading) 
+        if (Input.GetKey(KeyCode.R) && !currentlyReloading && currentAmmo != magSize) 
         {
-            playSound.clip = reload;
+            playSound.clip = reloadFinish;
             playSound.Play();
             currentlyReloading = true;
             Invoke("Reload", 1f);
@@ -109,29 +125,61 @@ public class Gun : MonoBehaviour
     {
         currentAmmo = magSize;
         currentlyReloading = false;
-        playSound.clip = reloadFinish;
+        playSound.clip = reload;
         playSound.Play();
+        gameManager.UpdateText();
+        zeroAmmo = false;
     }
 
     void Shoot()
     {
-        muzzleFlash.Play();
-        playSound.clip = fireSound;
-        playSound.Play();
-        RaycastHit hit;
-        gunSmoothingValue = gunRecoil;
-        camSmoothingValue += screenRecoil; 
-
-        if (Physics.Raycast(fpsCamera.transform.position, fpsCamera.transform.forward, out hit, int.MaxValue, ~layerMask)) // use ~ to invert. If you want to hit ONLY said layer, then remove the ~
+        if (currentAmmo > 0)
         {
-            Enemy target = hit.transform.GetComponent<Enemy>();
-            if (target != null)
+            muzzleFlash.Play();
+            playSound.clip = fireSound;
+            playSound.Play();
+            RaycastHit hit;
+            gunSmoothingValue = gunRecoil;
+            camSmoothingValue += screenRecoil;
+
+            if (Physics.Raycast(fpsCamera.transform.position, fpsCamera.transform.forward, out hit, int.MaxValue, ~layerMask)) // use ~ to invert. If you want to hit ONLY said layer, then remove the ~
             {
-                target.TakeDamage(damage);
+                Enemy target = hit.transform.GetComponent<Enemy>();
+                if (target != null)
+                {
+                    target.TakeDamage(damage);
+                }
+                Instantiate(hitImpact, hit.point, Quaternion.LookRotation(hit.normal));
+
+                if (isExplosive)
+                {
+                    Collider[] colliders = Physics.OverlapSphere(hit.point, explosionRadius);
+
+                    foreach (Collider nearbyObject in colliders)
+                    {
+                        Rigidbody rb = nearbyObject.GetComponent<Rigidbody>();
+                        if (rb != null) // BRO HOW MUCH IFS ARE YOU GONNA NEST????????? THAT'S ALREADY FOUR BRO
+                        {
+                            rb.AddExplosionForce(weaponForce, hit.point, explosionRadius);
+                        }
+                    }
+
+                }
+
+                if (hit.rigidbody != null)
+                {
+                    hit.rigidbody.AddForce(-hit.normal * weaponForce);
+                }
             }
-            Instantiate(hitImpact, hit.point, Quaternion.LookRotation(hit.normal));
+            currentAmmo--;
+            gameManager.UpdateText();
+        } else
+        {
+            zeroAmmo = true;
+            playSound.clip = noAmmo;
+            playSound.Play();
         }
-        currentAmmo--;
+       
     }
 
     void RecoilReset()  
