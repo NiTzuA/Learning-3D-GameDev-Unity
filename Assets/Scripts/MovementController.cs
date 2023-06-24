@@ -13,16 +13,28 @@ public class MovementController : MonoBehaviour
     public float sprintSpeed = 8.5f;
     public float gravity = -9.81f;
     public float jumpHeight = 5f;
+    public bool isScoped;
     float gameSpeedX;
     float gameSpeedY;
 
     public Transform groundCheck1;
     public float groundDistance = 0.4f;
     public LayerMask groundMask;
+    public static MovementController instance;
+
 
     Vector3 velocity;
     bool isGrounded;
 
+
+    private void Awake()
+    {
+        if (instance != null)
+        {
+            return;
+        }
+        instance = this;
+    }
 
     private void Start()
     {
@@ -64,11 +76,11 @@ public class MovementController : MonoBehaviour
         Vector3 moveX = Vector3.Normalize(transform.right * x);
         Vector3 moveY = Vector3.Normalize(transform.forward * z);
 
-        if (Input.GetKey(KeyCode.LeftShift) && Input.GetAxisRaw("Vertical") != 0)
+        if (Input.GetKey(KeyCode.LeftShift) && Input.GetAxisRaw("Vertical") != 0 && !isScoped)
         {
             gameSpeedY = sprintSpeed;
             playerFOV.fieldOfView = Mathf.Lerp(playerFOV.fieldOfView, walkFOV + (walkFOV * 0.15f), 15f * Time.deltaTime); 
-        } else
+        } else if (!isScoped)
         {
             playerFOV.fieldOfView = Mathf.Lerp(playerFOV.fieldOfView, walkFOV, 15f * Time.deltaTime);
         }

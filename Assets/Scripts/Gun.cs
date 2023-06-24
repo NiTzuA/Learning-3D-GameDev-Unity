@@ -14,15 +14,19 @@ public class Gun : MonoBehaviour
     public float currentAmmo;
     public float magSize = 30f;
     public float explosionRadius = 0f;
+    public float weaponSpread = 0.05f;
+    public float weaponSpreadIncrease = 0.005f;
     public bool isAuto;
     public bool isExplosive;
-    bool zeroAmmo;
-    float drawAnimation = 0;
-    bool currentlyReloading;
-    private float nextTimeToFire;
+
+
+    protected bool zeroAmmo;
+    protected float drawAnimation = 0;
+    protected bool currentlyReloading;
+    protected float nextTimeToFire;
     public float animationDistance = 20f;
     public float weaponForce = 10f;
-    GameManager gameManager;
+    protected GameManager gameManager;
 
     public ParticleSystem muzzleFlash;
     public Transform fpsCamera;
@@ -33,19 +37,20 @@ public class Gun : MonoBehaviour
     public AudioClip noAmmo;
     public GameObject hitImpact;
     public int playerLayer;
-    private int layerMask;
+    protected int layerMask;
     public Transform gun;
     public Transform weaponHolder;
     public Transform playerCam;
 
-    float gunSmoothingValue;
-    float camSmoothingValue;
+    protected float gunSmoothingValue;
+    protected float camSmoothingValue;
+    protected float currentSpread = 0f;
 
     private void OnEnable()
     {
         currentlyReloading = true;
         muzzleFlash.Pause(true);
-        playSound.clip = reload;
+        playSound.clip = reloadFinish;
         playSound.Play();
         Invoke("LoadWeapon", 0.5f);
     }
@@ -95,9 +100,14 @@ public class Gun : MonoBehaviour
             }
         }
 
+        if (!Input.GetButton("Fire1") && !Input.GetButtonDown("Fire1")) 
+        {
+            currentSpread = Mathf.Lerp(currentSpread, 0f, 1f * Time.deltaTime);
+        }
+
         if (Input.GetKey(KeyCode.R) && !currentlyReloading && currentAmmo != magSize) 
         {
-            playSound.clip = reloadFinish;
+            playSound.clip = reload;
             playSound.Play();
             currentlyReloading = true;
             Invoke("Reload", 1f);
@@ -107,7 +117,7 @@ public class Gun : MonoBehaviour
         DrawWeapon();
     }
 
-    void DrawWeapon()
+    protected void DrawWeapon()
     {
         if (drawAnimation != 0)
         {
@@ -116,22 +126,22 @@ public class Gun : MonoBehaviour
         }
     }
 
-    void LoadWeapon()
+    protected void LoadWeapon()
     {
         currentlyReloading = false;
     }
 
-    void Reload()
+    protected void Reload()
     {
         currentAmmo = magSize;
         currentlyReloading = false;
-        playSound.clip = reload;
+        playSound.clip = reloadFinish;
         playSound.Play();
         gameManager.UpdateText();
         zeroAmmo = false;
     }
 
-    void Shoot()
+    public virtual void Shoot()
     {
         if (currentAmmo > 0)
         {
@@ -140,10 +150,19 @@ public class Gun : MonoBehaviour
             playSound.Play();
             RaycastHit hit;
             gunSmoothingValue = gunRecoil;
-            camSmoothingValue += screenRecoil;
+            Invoke("Recoil", 0.05f);
 
-            if (Physics.Raycast(fpsCamera.transform.position, fpsCamera.transform.forward, out hit, int.MaxValue, ~layerMask)) // use ~ to invert. If you want to hit ONLY said layer, then remove the ~
+            float randomSpreadX = Random.Range(-currentSpread, currentSpread);
+            float randomSpreadY = Random.Range(-currentSpread, currentSpread);
+
+            currentSpread += weaponSpreadIncrease;
+            currentSpread = Mathf.Clamp(currentSpread, 0, weaponSpread);
+
+            if (Physics.Raycast(fpsCamera.transform.position, fpsCamera.transform.forward + 
+                new Vector3(randomSpreadX, randomSpreadY, 0f), 
+                out hit, int.MaxValue, ~layerMask)) // use ~ to invert. If you want to hit ONLY said layer, then remove the ~
             {
+
                 Enemy target = hit.transform.GetComponent<Enemy>();
                 if (target != null)
                 {
@@ -182,7 +201,12 @@ public class Gun : MonoBehaviour
        
     }
 
-    void RecoilReset()  
+    protected void Recoil()
+    {
+        camSmoothingValue += screenRecoil;
+    }
+
+    protected void RecoilReset()  
     {
         if (gunSmoothingValue > 0f)
         {
