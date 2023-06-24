@@ -31,6 +31,7 @@ public class Gun : MonoBehaviour
     public ParticleSystem muzzleFlash;
     public Transform fpsCamera;
     public AudioSource playSound;
+    public AudioSource effects;
     public AudioClip fireSound;
     public AudioClip reload;
     public AudioClip reloadFinish;
@@ -50,8 +51,8 @@ public class Gun : MonoBehaviour
     {
         currentlyReloading = true;
         muzzleFlash.Pause(true);
-        playSound.clip = reloadFinish;
-        playSound.Play();
+        effects.clip = reloadFinish;
+        effects.Play();
         Invoke("LoadWeapon", 0.5f);
     }
 
@@ -59,21 +60,28 @@ public class Gun : MonoBehaviour
     {
         weaponHolder.transform.localPosition = new Vector3(0f, -animationDistance, 0f);
         drawAnimation = -animationDistance;
+        ForceRecoilOff();
     }
 
     private void Start()
     {
-        gameManager = GameManager.instance;
         drawAnimation = -animationDistance;
         weaponHolder.transform.localPosition = new Vector3(0f, -animationDistance, 0f);
         currentAmmo = magSize;
         screenRecoil = -screenRecoil;
         zeroAmmo = false;
         layerMask = 1 << playerLayer; // I still don't get why I have to bit shift to obtain the layer mask...
+        gameManager = GameManager.instance;
     }
 
     void Update()
     {
+        if (gameManager.gameIsPaused)
+        {
+            return;
+        }
+
+
         if (currentAmmo == 0 && Input.GetButtonDown("Fire1") && Time.time >= nextTimeToFire && !currentlyReloading)
         {
             nextTimeToFire = Time.time + 1f / fireRate;
@@ -107,8 +115,8 @@ public class Gun : MonoBehaviour
 
         if (Input.GetKey(KeyCode.R) && !currentlyReloading && currentAmmo != magSize) 
         {
-            playSound.clip = reload;
-            playSound.Play();
+            effects.clip = reload;
+            effects.Play();
             currentlyReloading = true;
             Invoke("Reload", 1f);
         }
@@ -135,8 +143,8 @@ public class Gun : MonoBehaviour
     {
         currentAmmo = magSize;
         currentlyReloading = false;
-        playSound.clip = reloadFinish;
-        playSound.Play();
+        effects.clip = reloadFinish;
+        effects.Play();
         gameManager.UpdateText();
         zeroAmmo = false;
     }
@@ -220,6 +228,14 @@ public class Gun : MonoBehaviour
             playerCam.transform.localRotation = Quaternion.Euler(camSmoothingValue, 0f, 0f);
         }
         
+    }
+
+    protected void ForceRecoilOff()
+    {
+        camSmoothingValue = 0f;
+        gunSmoothingValue = 0f;
+        playerCam.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+        gun.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
     }
 
 }

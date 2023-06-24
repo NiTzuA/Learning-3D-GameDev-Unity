@@ -3,28 +3,40 @@ using UnityEngine;
 public class Sniper : Gun
 {
     public AudioClip chkchk;
-    public AudioSource effects;
     bool isScoped = false;
     public Camera scopeCamera;
     MovementController movementController;
     MouseController mouseController;
     public GameObject scope;
 
+    private void OnDisable()
+    {
+        weaponHolder.transform.localPosition = new Vector3(0f, -animationDistance, 0f);
+        drawAnimation = -animationDistance;
+        Unscope();
+        ForceRecoilOff();
+    }
+
     private void Start()
     {
-        gameManager = GameManager.instance;
+        currentAmmo = magSize;
         drawAnimation = -animationDistance;
         weaponHolder.transform.localPosition = new Vector3(0f, -animationDistance, 0f);
-        currentAmmo = magSize;
         screenRecoil = -screenRecoil;
         zeroAmmo = false;
         layerMask = 1 << playerLayer; // I still don't get why I have to bit shift to obtain the layer mask...
         movementController = MovementController.instance;
         mouseController = MouseController.instance;
+        gameManager = GameManager.instance;
     }
 
     void Update()
     {
+        if (gameManager.gameIsPaused)
+        {
+            return;
+        }
+
         if (Input.GetButtonDown("Fire1") && Time.time >= nextTimeToFire && !currentlyReloading && !zeroAmmo)
         {
             nextTimeToFire = Time.time + 1f / fireRate;
@@ -44,8 +56,8 @@ public class Sniper : Gun
 
         if (Input.GetKey(KeyCode.R) && !currentlyReloading && currentAmmo != magSize)
         {
-            playSound.clip = reload;
-            playSound.Play();
+            effects.clip = reload;
+            effects.Play();
             currentlyReloading = true;
             Invoke("Reload", 1f);
         }
@@ -70,7 +82,7 @@ public class Sniper : Gun
                 currentSpread = 0f;
             } else
             {
-                currentSpread = 1f;
+                currentSpread = 0.25f;
             }
 
             float randomSpreadX = Random.Range(-currentSpread, currentSpread);
@@ -121,12 +133,16 @@ public class Sniper : Gun
 
     void Unscope()
     {
+        if (isScoped)
+        {
+            mouseController.mouseSensitivity /= 0.166666f;
+        }
         isScoped = false;
         movementController.isScoped = false;
         scopeCamera.fieldOfView = 60f;
         scope.SetActive(false);
         gun.transform.localScale = new Vector3(1f, 1f, 1f);
-        mouseController.mouseSensitivity /= 0.166666f;
+        
     }
 
     void Chkchk()

@@ -4,10 +4,13 @@ public class Shotgun : Gun
 {
     public int numberOfPellets = 15;
     public AudioClip chkchk;
-    public AudioSource effects;
 
     public override void Shoot()
     {
+        if (gameManager.gameIsPaused)
+        {
+            return;
+        }
         if (currentAmmo > 0)
         {
             muzzleFlash.Play();

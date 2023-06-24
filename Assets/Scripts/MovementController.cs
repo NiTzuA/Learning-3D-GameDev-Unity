@@ -21,6 +21,7 @@ public class MovementController : MonoBehaviour
     public float groundDistance = 0.4f;
     public LayerMask groundMask;
     public static MovementController instance;
+    public GameManager gameManager;
 
 
     Vector3 velocity;
@@ -38,6 +39,7 @@ public class MovementController : MonoBehaviour
 
     private void Start()
     {
+        gameManager = GameManager.instance;
         playerFOV.fieldOfView = walkFOV;
         gameSpeedX = 0;
         gameSpeedY = 0;
@@ -46,6 +48,11 @@ public class MovementController : MonoBehaviour
 
     void Update()
     {
+        if (gameManager.gameIsPaused)
+        {
+            return;
+        }
+
         isGrounded = Physics.CheckSphere(groundCheck1.position, groundDistance, groundMask);
 
         if (isGrounded && velocity.y < 0) 
